@@ -1,0 +1,392 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+	<style>
+		.toc {
+			margin-left: 30px;
+		}
+		.code {
+			margin-left: 30px;
+			color:#000000;
+			background-color:#ffffff;
+		}
+		.shell {
+			margin-left: 30px;
+			color:#000000;
+			background-color:#ffffff;
+		}
+		table {
+			width: 100%;
+			max-width: 800px;
+			margin: 0 auto;
+			overflow: hidden;
+		}
+		thead th {
+			background: #0f766e;
+			color: white;
+			padding: 12px 16px;
+			text-align: left;
+			font-weight: 600;
+		}
+
+		tbody tr:nth-child(even) td {
+			background: #fbfff9;
+		}
+		.center {
+			text-align: center;
+		}
+	</style>
+</head>
+<body bgcolor="#8EB3EC"><br><br>
+<table align="center" cellpadding="50" border="1" bgcolor="#9EC3FC" width="720"><tbody><tr><td>
+
+<h1>Assignment 7 - Python (3.13 or earlier only)</h1>
+
+<ol>
+	<li><b>Read this entire document including the FAQs at the bottom before starting.</b></li><br><br>
+
+	<li><b>Port your implementation of assignments 4 (Java) and 6 (JavaScript) to Python.</b>
+		(Ms. Pacman, Tiles, Ghosts, Fruits, and collision detection should all behave as in your other versions.)
+		There is some starter code provideed on Blackboard.
+		Be sure to save it as "<font color="red"><b>game.py</b></font>", and execute it* with the command "python game.py".
+		
+		<br><br><font color=red>You must use the starter code for this assignment.</font> Failure to use the provided starter code will result in a 0, and will be reported to the AUAIB.<br>
+		
+		<br><i>*See FAQs below</i></li><br><br>
+	
+	<li><b>Differences between assignments 4, 6, and 7.</b>
+		This assignment will load from a json, and will also save to the map.json file. You <b>will</b> have edit capability, however, do <font color=red><b>NOT</b></font> port the mouse-click-to-remove-items capability from A4.<br><br>
+		 <table>
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>A4 - Java</th>
+        <th>A6 - JavaScript</th>
+        <th>A7 - Python</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td >Edit mode</td>
+        <td class="center">yes</td>
+        <td class="center">no</td>
+        <td class="center">yes</td>
+      </tr>
+      <tr>
+        <td>Mouseclick to remove items</td>
+        <td class="center">yes</td>
+        <td class="center">no</td>
+        <td class="center"><font color=red><b>no</b></font></td>
+      </tr>
+      <tr>
+        <td>Animated Ghosts</td>
+        <td class="center">maybe</td>
+        <td class="center">yes</td>
+        <td class="center">yes</td>
+      </tr>
+      <tr>
+        <td>Animated Fruits</td>
+        <td class="center">no</td>
+        <td class="center">no</td>
+        <td class="center">no</td>
+      </tr>
+      <tr>
+        <td>Pellets using mouse-dragged functionality</td>
+        <td class="center">no</td>
+        <td class="center">no</td>
+        <td class="center">yes</td>
+      </tr>
+      <tr>
+        <td>Load from JSON</td>
+        <td class="center">yes</td>
+        <td class="center">maybe</td>
+        <td class="center">yes</td>
+      </tr>
+      <tr>
+        <td>Save to map.json</td>
+        <td class="center">yes</td>
+        <td class="center">no</td>
+        <td class="center">yes</td>
+      </tr>
+      <tr>
+        <td>Clear map</td>
+        <td class="center">yes</td>
+        <td class="center">no</td>
+        <td class="center">yes</td>
+      </tr>
+      <tr>
+        <td>Keep track of score</td>
+        <td class="center">maybe</td>
+        <td class="center">yes</td>
+        <td class="center">yes</td>
+      </tr>
+      <tr>
+        <td>Iterator</td>
+        <td class="center">yes</td>
+        <td class="center">no</td>
+        <td class="center">no</td>
+      </tr>
+
+    </tbody>
+  </table>
+		</li><br><br>
+	
+	<li><b>Let's look at a few parts of the provided starter code:</b>
+	<ul><li><b>Saving and loading your map</b>
+		The ability to save and load your map file has been provided to you. The marshal function is in Sprite, which means that everything that is a Sprite knows how to marshal itself.
+
+<pre class="code">
+def marshal(self):
+	return {
+		"x": self.x,
+		"y": self.y
+	}
+</pre>
+
+		In Model, you can see how the map is marshalled. Notice that there are two lists and two separate attributes. You may or may not have your own attributes in your code, but you <i>will</i> have lists! (Also there are no lilypads in the starter code, but is provided to show how you handle two (or more) separate lists.)
+<pre class="code">
+def save_map(self):
+	# create lists for each type of sprite you want to save
+	rocks = []
+	lilypads = []
+
+	# go through all of the sprites, saving them into the 
+	# appropriate lists
+	for s in self.sprites:
+		if s.is_rock():
+			rocks.append(s.marshal())
+		elif s.is_lilypad():
+			lilypads.append(s.marshal())
+
+	# create the dictionary of sprites, split by what types
+	# they are - rocks and lilypads are lists, while 
+	# turtlex and turtley are singular attributes
+	map_to_save = {
+		"rocks": rocks,
+		"lilypads": lilypads,
+		"turtlex": self.turtle.x,
+		"turtley": self.turtle.y
+	}
+
+	# Save to file
+	with open(Model.filename, "w") as f:
+		json.dump(map_to_save, f)
+</pre>
+
+			And to load the map, we reverse the process:
+<pre class="code">
+def load_map(self):
+	# reset the Rock count if we're loading (or reloading)
+	# the map
+	Rock.reset_rock()
+	
+	self.sprites = []
+	# example of adding a hardcoded Rock
+	self.sprites.append(Rock(200,100,Rock.ROCK_WIDTH, Rock.ROCK_HEIGHT))
+	
+	# example of reading through the map.json file
+	# and loading rocks and the turtle's location
+	# open the json map and pull out the individual lists of sprite objects
+	with open(Model.filename) as file:
+		data = json.load(file)
+		#get the lists labeled as "rocks" and "lilypads" from the map.json file
+		rocks = data["rocks"]
+		lilypads = data["lilypads"]
+		#get turtle data out - these are individual
+		#attributes, not a list
+		turtle_x = data["turtlex"]
+		turtle_y = data["turtley"]
+	file.close()
+	
+	#create turtle using saved attributes
+	self.turtle = Turtle(turtle_x, turtle_y)
+	self.sprites.append(self.turtle)
+
+	#for each entry inside the rocks list, pull the key:value pair out and create 
+	#a new Rock object with (x,y,w,h)
+	for entry in rocks:
+		self.sprites.append(Rock(entry["x"], entry["y"], Rock.ROCK_WIDTH, Rock.ROCK_HEIGHT))
+</pre>
+			Notice again that we show how to create a singular Rock object (this will be helpful for edit mode), and how to load a list of sprites (rocks) and singular attributes (turtlex, turtley)
+			</li><br><br>
+			
+			
+			<li><b>Static variables and class methods in Python</b>
+			The Rock class has examples of both static variables and a static method - all of these are accessed with Classname.variablename or Classname.method_name() instead of self.variablename or self.method_name(). This will be useful for keeping track of the number of points you've gotten.
+<pre class="code">
+class Rock(Sprite):
+    # variables that belong to the class, not to a specific
+    # instance of the class - this is similar to Java's static variables
+    ROCK_WIDTH = 50
+    ROCK_HEIGHT = 50
+    num_rocks = 0
+    
+    # this method belongs to the class itself and does not need
+    # the 'self' object
+    @staticmethod
+    def reset_rocks():
+        Rock.num_rocks = 0
+    
+    # constructor with default values - one of the ways you can
+    # mimic Java's overloaded constructors
+    # in this example, if w and h are provided, create the rock
+    # as defined. If they are not provided, create a rock at 
+    # half the regular size
+    def __init__(self, x, y, w=None, h=None):
+        if w is None or h is None:
+            super().__init__(x, y, Rock.ROCK_WIDTH/2, Rock.Rock_HEIGHT/2, "images/rock.png")
+        else:
+            super().__init__(x, y, w, h, "images/rock.png")
+        Rock.num_rocks += 1
+
+    def is_rock(self):
+        return True
+</pre>
+			You may have noticed that the code provided <b>here</b> is different than the starter code - that's because <b>this</b> is the main part you need, but the starter code also shows how to use the mouse-dragged mechanism, which will be explained in more detail in a moment.
+			</li><br><br>
+			
+			<li><b>Finally, the View class!</b> <br><br>
+			In previous assignments you've had both editMode and addItemMode allowing you to change your map (edit) and add items (addItemMode = true) or remove items (addItemMode = false). We are <b>not</b> implementing remove items by clicking, only adding. Therefore, we do not need addItemMode. If edit_mode is True, then we are adding items. If edit_mode is False, then we are playing the game.<br><br>
+			
+			The View class has already implemented edit_mode capability for you with a light_green when adding items, and a dark green when playing the game. Notice that we are using a (static) class member variable in Controller to access edit_mode.
+
+<pre class="code">
+# change background color if the user is in edit_mode
+if Controller.edit_mode:
+	self.screen.fill([146, 203, 146]) #light green
+else:
+	self.screen.fill([72, 152, 72]) #dark forest green
+</pre>
+
+			<br><br>
+			Last part - adding text to the screen. This will help with keeping track of score, aka the points you've collected. You are welcome to have this number floating above Ms. Pacman's head if you want, or you can follow the example code and have it displayed as a text string on the screen. Notice that we're using the (static) class member variable in Rock to access how many rocks are on the screen.
+<pre class="code">
+# add text to the screen
+# Default font, size 32
+font = pygame.font.SysFont(None, 32)   
+text_string = "There are " + str(Rock.num_rock) + " rocks on the screen!"
+PURPLE_COLOR = (160, 32, 240)
+text_surface = font.render(text_string, True, PURPLE_COLOR)
+TEXT_LOCATION = (250, 10)
+self.screen.blit(text_surface, TEXT_LOCATION)
+</pre>
+			</li>
+		</ul><br><br>
+		
+		<li><b>Add Pellets!</b>
+			Finally, we are adding one more Sprite to this assignment - Pellets. <br><br>
+			Things to note:
+			<ul><li>There is no animation for a pellet.</li>
+			<li>You can create "power pellets" if you want, but it isn't required.</li>
+			<li>You will be using the mouse-dragged capability to be able to add many pellets in one fell swoop instead of many individual clicks. Pellet is the only class that will be using the mouse-dragged functionality to add new Sprites. Most of this functionality is provided to you in the starter code.</li>
+<pre class="code">
+elif event.type == pygame.MOUSEMOTION and event.buttons[0]:
+	if Controller.edit_mode:
+		# add a continuous line of rocks - there's an extra parameter to tell 
+		# the difference between clicking and adding, and dragging and adding
+		# this will not be necessary for your homework code, but was for this example
+		self.model.add_rock(pygame.mouse.get_pos(), "The Rock")
+</pre>
+			Notice how this code essentially implements mouse motion - if the mouse is in motion, and the left mouse button is pressed, add a rock, with an extra parameter. <b>You will not need to do the extra parameter thing.</b> You will have a completely separate class, and will create Pellets the same way as the starter code shows creating Rocks upon mouseclick.
+			<li>Code has been provided for you to check if there's already a sprite in the location, or overlapping with the location that you are attempting to add a new Sprite. Read the comments in the code for more clarity.</li>
+			</ul><br><br>
+			
+			You will also need to add Pellets to your items_i_can_add list in Model - previously you had Tile, Ghost, and Fruit. Now you will have Tile, Ghost, Fruit, and Pellet!<br><br><br>
+			
+			</ul>
+		</li><br><br>
+
+		<li><b>Active KeyPresses/MousePresses for Assignment 7.</b>
+		You are welcome to add additional key or mouse functionality for your code, but these are the things for which we are looking and on which you will be graded. If you differ from this list, <font color=red>include a comment in Blackboard's text box telling us how to interact with your code</font>. Both uppercase and lowercase letters should provide the same expected behavior.
+		<ul>
+			<li>e or E - edit (this should toggle edit_mode)</li>
+				<ul> <b>When edit is true:</b><ul>
+				<li>c or C - clear map (this has been provided)</li>
+					<ul><li>if edit_mode = true (green background) (provided), <b>mouse press</b> should add the displayed map_item to an empty location</li>
+				</ul>
+				<li>mouse press - if in the upper left corner in the edit_mode box, the available map item to add should rotate between options (there are now 4 edit_mode addable items - Tile, Ghost, Fruit, and Pellet.)</li>
+				<li>mouse press - anywhere else on the screen, should add the currently displayed map item (partially provided).</li>
+				<li>mouse dragged - when the Pellet is displayed, the user should be able to drag the mouse and add multiple Pellets to the screen in one fell swoop.</li>
+			</ul></ul>
+			<ul> <b>When edit is false (no box in the upper left corner):</b><ul>
+				<li>mouse click - nothing</li>
+				<li>mouse dragged - nothing</li>
+			</ul></ul>
+			<li>arrow keys - control the character's movement (she should be able to roam the map, eating Fruits, Ghosts, and Pellets; the camera should follow her vertically, she should be able to warp horizontally; she should be animated while moving)</li>
+			<li>l - load map (this is a lowercase L, and is independent of edit mode) (outline is provided)</li>
+			<li>q - quit program (provided to you)</li>
+			<li>s - save map (outline is provided)</li>
+			<li>esc - quit program (provided to you)</li>
+		</ul>
+	</li><br><br>
+
+	<li><b>Write a brief report</b>.
+		Write a report discussing how you ported assignments 4 and 6 to assignment 7, what the most challenging part was, what the most common error you experienced was and how you adjusted for it, etc. You can write this as you are working on the project and come across challenges. You can also use this report to discuss something you are particularly proud of in your project.
+		<br><br>
+		<font color=red><b>If you do not include a report, you will receive a 0 on the assignment.</b></font> This report must be written in your own words without the use of generative AI or other tools. We want to know <i>your</i> process that you took. This is meant to be an informal report in your own words. Do not use Grammarly or other AI tools.
+	</li><br><br>
+	
+		
+	<li><b>Submit a zip archive in the usual manner <font color=red>and your report</font></b>
+		The zip archive ("Assignment7.zip") should contain your single Python file, <b><font color=purple>map file</font></b>, and image files (in a folder) only. There should be <b>NO</b> other folders. Test your zip archive before you submit it by extracting into a separate folder and then running your Python file from that new folder. Ensure that it works as expected, especially finding all images as necessary. Your zip archive should open directly to your files. Call it <b><font color=red>Assignment7.zip</font></b>. Be sure to use the provided zip checker Python script before turning in. Submit your report as a separate file on the same submission.
+	</li><br><br>
+		
+</ol>
+
+
+<br><br><br><br><h2>General Rubric (subject to change as needed)</h2>
+	You should submit all necessary files through Blackboard - a zip archive named "<b><font color="red">Assignment7.zip</font></b>" and a separate file for your report (in .pdf or .docx format). You should test your submission by unzipping it into a different folder
+	to make sure that it still runs as expected with all needed files.	When the grader opens your zip archive, they should find:
+	<ul>
+		<li>A single Python file containing a Ms. Pacman inspired game written in Python named <b><font color="red">game.py</font></b>.</li>
+		<li>Your map file</li>
+		<li>Any images needed for your code to run (in an images folder)</li>
+		<li>Your name, date, and assignment description are at the top of your file</li>
+		<li>When you press the arrow keys, Ms. Pacman should animate around the screen, warping horizontally when reaching the side, and the camera should follow her vertically.</li>
+		<li>Ms. Pacman, Ghosts, and Fruits should be able to interact with Tiles as if they were solid objects.</li>
+		<li>You have 5 different types of Sprites - Ms. Pacman, Tile, Ghost, Fruit, Pellet</li>
+		<li>Sprites have collision detection and can collide from all directions</li>
+		<li>Ms. Pacman should be able to consume Ghosts, Fruits, and Pellets and your score should increase every time she consumes one of the other sprites.</li>
+		<li>Pellets exist, and can be consumed by Ms. Pacman.</li>
+		<li>Fruits bounce off of Tiles and move around the screen; they disappear when Ms. Pacman eats them.</li>
+		<li>Ghosts bounce off of Tiles and move around the screen; they go through a disappearance sequence when Ms. Pacman makes contact with them. Ms. Pacman walks through them, and gets points for 'catching' them.</li>
+		<li>You can add sprites with the appropriate key presses (see above)</li>
+		<li>Your map loads upon start, and is read from a .json file</li>
+		<li>You do need a report</li>
+	</ul>
+	If you meet these requirements <i>and any others</i> listed in the previous programming assignments, you should expect full credit. <font color=red><b>Per university policy, there is no work accepted after the last day of classes (Apr 30).</b></font>
+
+
+
+
+
+
+
+
+<h2>FAQ:</h2>
+<ol>
+	<li><b>Q: I'm getting a message about "pygame" not being found. What can I do about that?</b><br>
+		A: You'll need a package called "pygame", and will probably use "pip" to install it. Utilize
+		your favorite search engine for more details!
+		</li><br><br>
+	<li><b>Q: I'm getting a bizarre error with pygame not being able to be installed and something about a wheel??</b><br>
+		A: pygame does not work on python 3.14 and newer. Install 3.13 or older and install pygame for that version of python instead
+		</li><br><br>
+	<li><b>Q: Ugh! I'm getting an unexpected indentation error but everything looks the same! What's going on?</b><br>
+		A: Python treats tabs and spaces differently, even though they may look the same to us! If you're using Notepad++, go to View->Show Symbol->Show White Space and TAB. This will put a small dot for a space, or an arrow for a tab so you can easily see the difference between the two. Other editors likely have something similar available to them.
+		</li><br><br>
+	<li><b>Q: Do I *have* to include an iterator?</b><br>
+		A: You do not need an iterator. 
+		</li><br><br>
+	<li><b>Q: I have multiple versions of Python on my computer - which do I run?</b><br>
+		A: There are at least three different commands to run Python code: <b>python game.py</b>, <b>python3 game.py</b>, or <b>py game.py</b>. You can use "python --version", "python3 --version" or "py --version" to see which version you're running. My "python" and "python3" are both 3.10, while "py" is 3.11, and for me, pygame is installed under 3.11.
+		</li><br><br>
+	<li><b>Q: I see that the draw function is back under View again - I should just leave it there, right??</b><br>
+		A: Probably not! You will be porting your implementation of A4 over to Python (and adding the extra functionality from A6 for keeping track of score). You will likely find it easier to tell each Sprite to draw itself. You can have a default draw(...) function in Sprite that Tile, Fruit, and Pellet use (those are the basic draws with a single image), while Ms. Pacman and Ghosts can <i>override</i> that draw(...) function to do their fancy animation draw(...) instead (pulling from an array/list of images). 
+		<br><br>Remember that these programming languages generally look for the most <b>local</b> version of the functions and variables available to them before going up the hierarchy and looking in parent classes. If you provide a draw function in Ms. Pacman, that's the one Ms. Pacman will use to draw herself, even if there's one in Sprite as well. If you don't provide a separate draw function in Tile, then when you tell the Tile to draw itself, it can't find one in its local class, so it will look at the Sprite parent class, find a draw function there, and use it to draw itself to the screen.
+		</li><br><br>
+	<li><b>Q: Do I *have* to read in from my json file?</b><br>
+		A: Yep! There's an example provided to you in the starter code of how to handle it.
+		</li><br><br>
+</ol>
+		
+</td></tr></table>
+</body></html>
